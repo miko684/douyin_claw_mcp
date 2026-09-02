@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "douyin-spider": {
+      "type": "stdio",
+      "command": "cmd.exe",
+      "args": [
+        "/d",
+        "/s",
+        "/c",
+        "call D:\\Desktop\\douyin_claw\\start_mcp.bat"
+      ],
+      "env": {
+        "DOUYIN_PROJECT_ROOT": "D:\\Desktop\\douyin_claw\\DouYin_Spider",
+        "PYTHONPATH": "D:\\Desktop\\douyin_claw\\DouYin_Spider",
+        "DOUYIN_STATS_FILE": "D:\\Desktop\\douyin_claw\\work\\mcp_stats.json",
+        "DOUYIN_OPEN_DASHBOARD": "0"
+      },
+      "description": "本机抖音采集 MCP"
+    }
+  }
+}

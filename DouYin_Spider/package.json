@@ -1,0 +1,27 @@
+{
+  "name": "douyin-spider-desktop",
+  "version": "1.0.0",
+  "description": "Douyin Spider desktop application with QR login",
+  "main": "electron/main.js",
+  "author": "Douyin Spider",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:backend": "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/build-backend.ps1",
+    "dist": "npm run build:backend && electron-builder --win nsis",
+    "dist:dir": "npm run build:backend && electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.douyin.spider",
+    "productName": "Douyin Spider",
+    "files": ["electron/**/*", "package.json"],
+    "extraResources": [{ "from": "release/backend", "to": "backend", "filter": ["**/*"] }],
+    "directories": { "output": "release" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "artifactName": "Douyin-Spider-Setup-${version}.${ext}" },
+    "nsis": { "oneClick": false, "allowToChangeInstallationDirectory": true, "createDesktopShortcut": true }
+  }
+}

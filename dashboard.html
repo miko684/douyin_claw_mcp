@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DouYin MCP · 采集控制台</title>
+  <style>
+    :root { --ink:#18201f; --muted:#6d7974; --paper:#f4f1ea; --card:#fffdf8; --line:#dedbd2; --red:#ef5b43; --teal:#1d8b7a; --yellow:#f2c94c; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--paper); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    .shell { max-width:1180px; margin:0 auto; padding:34px 26px 50px; }
+    .topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; padding-bottom:28px; border-bottom:1px solid var(--line); }
+    .eyebrow { color:var(--teal); font-size:12px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; }
+    h1 { margin:8px 0 8px; max-width:650px; font-family: Georgia, serif; font-size:clamp(34px, 5vw, 62px); line-height:.98; letter-spacing:-.045em; font-weight:500; }
+    .home-link { color:inherit; text-decoration:none; }
+    .home-link:hover { color:var(--teal); }
+    .home-link:focus-visible { outline:2px solid var(--teal); outline-offset:5px; border-radius:3px; }
+    .sub { margin:0; color:var(--muted); font-size:15px; line-height:1.6; }
+    .actions { display:flex; flex-direction:column; align-items:flex-end; gap:12px; min-width:170px; }
+    button { border:0; border-radius:999px; padding:14px 22px; cursor:pointer; color:#fff; background:var(--ink); font-weight:800; box-shadow:0 8px 0 rgba(24,32,31,.12); transition:transform .15s, box-shadow .15s, background .15s; }
+    button:hover { transform:translateY(-2px); box-shadow:0 10px 0 rgba(24,32,31,.12); }
+    button:active { transform:translateY(2px); box-shadow:0 3px 0 rgba(24,32,31,.12); }
+    button.running { background:var(--red); }
+    button.stop { padding:8px 15px; color:var(--ink); background:transparent; border:1px solid var(--line); box-shadow:none; font-size:12px; }
+    .clear-all, .danger-button { background:var(--red); }
+    .clear-all { padding:9px 15px; font-size:12px; box-shadow:0 5px 0 rgba(239,91,67,.2); }
+    .clear-all:hover, .danger-button:hover { box-shadow:0 7px 0 rgba(239,91,67,.2); }
+    .status { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:13px; }
+    .dot { width:9px; height:9px; border-radius:50%; background:#a9b1ac; }
+    .dot.live { background:var(--teal); box-shadow:0 0 0 5px rgba(29,139,122,.13); }
+    .dot.busy { background:var(--yellow); box-shadow:0 0 0 5px rgba(242,201,76,.16); }
+    .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:28px; }
+    .metric { min-height:154px; padding:20px 20px 48px; background:var(--card); border:1px solid var(--line); border-radius:18px; position:relative; overflow:hidden; }
+    .metric-open { display:block; width:100%; padding:0; color:var(--ink); background:transparent; border:0; border-radius:8px; box-shadow:none; text-align:left; }
+    .metric-open:hover { transform:none; box-shadow:none; color:var(--teal); }
+    .metric-open:active { transform:none; box-shadow:none; }
+    .metric-open:focus-visible, .metric-clear:focus-visible, .clear-all:focus-visible, .clear-button:focus-visible, .back-button:focus-visible, .danger-button:focus-visible, .cancel-button:focus-visible { outline:2px solid var(--teal); outline-offset:3px; }
+    .metric:after { content:""; position:absolute; width:88px; height:88px; border-radius:50%; right:-28px; bottom:-35px; background:rgba(29,139,122,.08); }
+    .metric:nth-child(2):after { background:rgba(239,91,67,.1); }
+    .metric:nth-child(3):after { background:rgba(242,201,76,.16); }
+    .metric:nth-child(4):after { background:rgba(63,105,177,.1); }
+    .label { color:var(--muted); font-size:13px; }
+    .metric-description { display:block; max-width:210px; margin-top:8px; color:var(--muted); font-size:11px; line-height:1.45; font-weight:500; }
+    .value { margin-top:15px; font-size:42px; line-height:1; font-weight:800; letter-spacing:-.06em; }
+    .body-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:14px; margin-top:14px; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px; }
+    .panel-head { display:flex; align-items:baseline; justify-content:space-between; gap:20px; padding-bottom:16px; border-bottom:1px solid var(--line); }
+    h2 { margin:0; font-size:15px; letter-spacing:-.02em; }
+    .tiny { color:var(--muted); font-size:12px; }
+    .activity { min-height:245px; padding-top:8px; }
+    .event { display:flex; justify-content:space-between; gap:16px; padding:13px 0; border-bottom:1px solid #ece9e1; font-size:13px; }
+    .event:last-child { border-bottom:0; }
+    .event-name { font-weight:750; }
+    .event-time { flex:none; color:var(--muted); font-variant-numeric:tabular-nums; }
+    .operations-panel { margin-top:14px; }
+    .operation-list { display:grid; gap:0; }
+    .operation-row { display:grid; grid-template-columns:110px minmax(140px,.65fr) minmax(180px,1.35fr) auto; align-items:center; gap:16px; padding:13px 0; border-bottom:1px solid #ece9e1; }
+    .operation-row:last-child { border-bottom:0; }
+    .operation-status { display:inline-flex; align-items:center; justify-content:center; width:max-content; min-width:66px; padding:5px 9px; border-radius:999px; background:#edf1ef; color:var(--muted); font-size:11px; font-weight:850; }
+    .operation-status.running { background:#fff3c4; color:#775b00; }
+    .operation-status.success { background:#dff3eb; color:#146c5e; }
+    .operation-status.empty { background:#edf1ef; color:#59645f; }
+    .operation-status.failed { background:#ffe5df; color:#b13625; }
+    .operation-tool { font-size:13px; font-weight:800; }
+    .operation-context { min-width:0; color:var(--muted); font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+    .operation-time { color:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .operation-error { display:block; margin-top:3px; color:#b13625; }
+    .metric-link { width:100%; text-align:left; color:var(--ink); box-shadow:none; }
+    .metric-link:hover { box-shadow:0 9px 0 rgba(24,32,31,.08); }
+    .metric-arrow { position:absolute; top:17px; right:19px; z-index:1; color:var(--ink); font-size:25px; font-weight:400; line-height:1; pointer-events:none; }
+    .metric-clear { position:absolute; right:17px; bottom:14px; padding:5px 9px; color:var(--muted); background:transparent; border:1px solid var(--line); box-shadow:none; font-size:11px; }
+    .metric-clear:hover { color:var(--red); border-color:var(--red); box-shadow:none; }
+    .terminal-panel { padding:0; overflow:hidden; background:#101513; border-color:#101513; color:#e8eee9; }
+    .terminal-panel .panel-head { padding:20px 22px 16px; border-bottom-color:#2a3530; }
+    .terminal-panel h2, .terminal-panel .tiny { color:#e8eee9; }
+    .terminal { min-height:290px; max-height:390px; overflow:auto; padding:8px 22px 19px; font-family:Consolas, "SFMono-Regular", monospace; font-size:12px; line-height:1.7; }
+    .terminal-line { display:grid; grid-template-columns:72px 58px 1fr; gap:10px; padding:3px 0; white-space:pre-wrap; word-break:break-word; }
+    .terminal-time { color:#84938b; }
+    .terminal-level { color:#69c7a0; }
+    .terminal-line.detail .terminal-level { color:#8eafd4; }
+    .terminal-line.error .terminal-level { color:#ff8977; }
+    .terminal-line.start .terminal-level { color:#f2c94c; }
+    .terminal-empty { color:#84938b; padding:18px 0; }
+    .detail-panel { margin-top:14px; background:var(--card); border:1px solid var(--line); border-radius:18px; padding:22px; }
+    .detail-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:17px; border-bottom:1px solid var(--line); }
+    .detail-actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px; }
+    .detail-source { color:#2468b1; font-size:12px; text-decoration:none; font-weight:800; }
+    .detail-source:hover { text-decoration:underline; }
+    .detail-description { margin:7px 0 0; max-width:680px; color:var(--muted); font-size:12px; line-height:1.55; }
+    .back-button { padding:8px 14px; color:var(--ink); background:transparent; border:1px solid var(--line); box-shadow:none; font-size:12px; }
+    .clear-button { padding:8px 12px; color:var(--red); background:transparent; border:1px solid rgba(239,91,67,.45); box-shadow:none; font-size:12px; }
+    .clear-button:hover { background:#fff1ee; box-shadow:none; }
+    .detail-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; padding-top:16px; }
+    .comments-list { display:block; }
+    .comment-card { display:grid; grid-template-columns:40px minmax(0,1fr); gap:12px; padding:18px 2px; border-bottom:1px solid #ece9e1; }
+    .comment-card:last-child { border-bottom:0; }
+    .comment-avatar { width:38px; height:38px; border-radius:50%; object-fit:cover; background:#e9e6de; border:1px solid var(--line); }
+    .comment-author-line { display:flex; align-items:baseline; justify-content:space-between; gap:14px; }
+    .comment-author { font-size:13px; font-weight:800; }
+    .comment-time { color:var(--muted); font-size:11px; white-space:nowrap; }
+    .comment-text { margin:9px 0 0; color:var(--ink); font-size:14px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+    .comment-attachments { display:flex; flex-wrap:wrap; gap:8px; margin-top:11px; }
+    .comment-attachment { width:150px; max-height:180px; object-fit:cover; border-radius:10px; background:#e9e6de; border:1px solid var(--line); }
+    .comment-footer { display:flex; align-items:center; flex-wrap:wrap; gap:14px; margin-top:12px; color:var(--muted); font-size:12px; }
+    .comment-like { color:#d9283e; font-weight:800; }
+    .comment-source { flex:1 1 100%; margin-top:4px; padding:10px 12px; border-radius:10px; background:#f2f5f5; color:var(--muted); line-height:1.5; }
+    .comment-source a { color:#2468b1; font-weight:800; text-decoration:none; overflow-wrap:anywhere; }
+    .comment-source a:hover { text-decoration:underline; }
+    .comment-source-title { display:block; margin-top:4px; color:var(--ink); font-weight:750; overflow-wrap:anywhere; }
+    .detail-item { display:flex; gap:14px; min-width:0; padding:14px; border:1px solid var(--line); border-radius:14px; background:#fffefa; }
+    .detail-cover { width:132px; height:86px; flex:none; object-fit:cover; border-radius:9px; background:#e9e6de; }
+    .detail-copy { min-width:0; }
+    .detail-title { margin:0 0 7px; font-size:14px; font-weight:800; line-height:1.45; overflow-wrap:anywhere; }
+    .detail-meta { margin:4px 0; color:var(--muted); font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+    .engagement-row { display:flex; align-items:center; flex-wrap:wrap; gap:16px; margin:10px 0 12px; }
+    .engagement-stat { display:inline-flex; align-items:center; gap:6px; color:var(--ink); font-size:14px; font-weight:850; line-height:1; }
+    .engagement-stat.like { color:#d9283e; }
+    .engagement-icon { width:19px; height:19px; flex:none; }
+    .engagement-stat.like .engagement-icon { fill:#ef3340; }
+    .engagement-stat.comment .engagement-icon { fill:none; stroke:var(--ink); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .detail-link, .result-link { color:#2468b1; font-size:12px; text-decoration:none; font-weight:750; }
+    .detail-link:hover, .result-link:hover { text-decoration:underline; }
+    .artifact-row { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px 0; border-bottom:1px solid #ece9e1; }
+    .artifact-row:last-child { border-bottom:0; }
+    .artifact-title { font-size:14px; font-weight:750; }
+    .empty-detail { grid-column:1/-1; padding:25px 0 10px; }
+    [hidden] { display:none !important; }
+    .note { color:var(--muted); font-size:13px; line-height:1.7; }
+    .note strong { color:var(--ink); }
+    .signal { margin-top:20px; padding:17px; border-radius:14px; color:#4b3a11; background:#fff5ce; font-size:13px; line-height:1.6; }
+    .clear-dialog { width:min(420px, calc(100vw - 32px)); padding:0; border:1px solid var(--line); border-radius:18px; color:var(--ink); background:var(--card); box-shadow:0 24px 70px rgba(24,32,31,.25); }
+    .clear-dialog::backdrop { background:rgba(24,32,31,.35); }
+    .clear-dialog-body { padding:24px; }
+    .clear-dialog h2 { font-size:20px; }
+    .clear-dialog p { margin:10px 0 22px; color:var(--muted); font-size:13px; line-height:1.65; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:10px; }
+    .cancel-button { padding:9px 14px; color:var(--ink); background:transparent; border:1px solid var(--line); box-shadow:none; font-size:12px; }
+    .danger-button { padding:9px 14px; font-size:12px; box-shadow:0 5px 0 rgba(239,91,67,.2); }
+    footer { margin-top:22px; color:var(--muted); font-size:12px; display:flex; justify-content:space-between; gap:12px; }
+    @media (max-width:800px) { .topbar { flex-direction:column; } .actions { align-items:flex-start; } .grid { grid-template-columns:repeat(2,1fr); } .body-grid { grid-template-columns:1fr; } .detail-list { grid-template-columns:1fr; } .operation-row { grid-template-columns:95px 1fr auto; } .operation-context { grid-column:2/-1; } }
+    @media (max-width:480px) { .shell { padding:24px 16px 40px; } .grid { gap:9px; } .metric { min-height:125px; padding:15px 15px 44px; } .value { font-size:34px; } .terminal-line { grid-template-columns:58px 47px 1fr; gap:6px; } .detail-head { align-items:flex-start; flex-direction:column; } .detail-actions { width:100%; justify-content:space-between; } .detail-item { flex-direction:column; } .detail-cover { width:100%; height:150px; } .comment-card { grid-template-columns:32px minmax(0,1fr); gap:9px; } .comment-avatar { width:32px; height:32px; } .comment-attachment { width:112px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="topbar">
+      <div>
+        <div class="eyebrow">Local command center</div>
+        <h1><a class="home-link" href="/" aria-label="返回抖音内容抓取 MCP 首页">一个抖音内容抓取的 MCP</a></h1>
+        <p class="sub">视频、评论、直播间与弹幕统一采集。启动服务后，如果还没有登录，会自动打开浏览器完成扫码。</p>
+      </div>
+      <div class="actions">
+        <button id="startButton" type="button">启动 MCP</button>
+        <button id="clearAllButton" class="clear-all" type="button">一键清空</button>
+        <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">服务未启动</span></div>
+        <button id="stopButton" class="stop" type="button">停止服务</button>
+      </div>
+    </section>
+
+    <div id="overviewPanels">
+    <section class="grid" aria-label="采集统计">
+      <article class="metric">
+        <button class="metric-open" type="button" data-detail="videos" aria-label="查看作品和视频详情"><span class="label">作品 / 视频</span><span class="metric-description">作品信息、强制本地封面、用户作品、关键词搜索结果与信息流</span><span id="videos" class="value">0</span></button>
+        <span class="metric-arrow" aria-hidden="true">→</span><button class="metric-clear" type="button" data-clear-kind="videos" aria-label="清空作品和视频数据">清空</button>
+      </article>
+      <article class="metric">
+        <button class="metric-open" type="button" data-detail="comments" aria-label="查看评论详情"><span class="label">已抓评论</span><span class="metric-description">评论原文、用户信息、点赞、回复与附件</span><span id="comments" class="value">0</span></button>
+        <span class="metric-arrow" aria-hidden="true">→</span><button class="metric-clear" type="button" data-clear-kind="comments" aria-label="清空评论数据">清空</button>
+      </article>
+      <article class="metric">
+        <button class="metric-open" type="button" data-detail="live_rooms" aria-label="查看直播间详情"><span class="label">直播间</span><span class="metric-description">房间状态、主播信息与直播间搜索结果</span><span id="rooms" class="value">0</span></button>
+        <span class="metric-arrow" aria-hidden="true">→</span><button class="metric-clear" type="button" data-clear-kind="live_rooms" aria-label="清空直播间数据">清空</button>
+      </article>
+      <article class="metric">
+        <button class="metric-open" type="button" data-detail="live_messages" aria-label="查看弹幕和直播事件详情"><span class="label">弹幕 / 直播事件</span><span class="metric-description">弹幕、礼物、进场、点赞、关注事件及私信轮询</span><span id="messages" class="value">0</span></button>
+        <span class="metric-arrow" aria-hidden="true">→</span><button class="metric-clear" type="button" data-clear-kind="live_messages" aria-label="清空弹幕和直播事件数据">清空</button>
+      </article>
+    </section>
+
+    <section class="body-grid">
+      <article class="panel terminal-panel">
+        <div class="panel-head"><h2>活动日志</h2><span id="updated" class="tiny">等待数据</span></div>
+        <div id="activity" class="terminal" aria-live="polite"><div class="terminal-empty">点击“启动 MCP”后，这里会显示详细执行过程。</div></div>
+      </article>
+      <aside class="panel">
+        <div class="panel-head"><h2>运行说明</h2><span class="tiny">无输入框</span></div>
+        <p class="note">网页只负责启动和观察。搜索、抓评论、下载和监听由 MCP 客户端调用；抓取一开始就会强制登记，成功、空结果和失败都会保留，成功结果另存为可追踪的 JSON。</p>
+        <div class="signal"><strong>安全边界</strong><br>Cookie 保留在本机，不显示在页面，也不会写入统计文件。点赞、评论、收藏、发弹幕和私信仍需 MCP 工具显式确认。</div>
+      </aside>
+    </section>
+    <section class="panel operations-panel">
+      <div class="panel-head"><h2>抓取操作台账</h2><span id="operationCount" class="tiny">0 次操作</span></div>
+      <div id="operationLedger" class="operation-list" aria-live="polite"><div class="empty-detail note">尚未进行抓取操作。</div></div>
+    </section>
+    </div>
+    <section id="detailPanel" class="detail-panel" hidden aria-live="polite">
+      <div class="detail-head"><div><div class="eyebrow">Collected detail</div><h2 id="detailTitle">详情</h2><p id="detailDescription" class="detail-description"></p></div><div class="detail-actions"><a id="detailSource" class="detail-source" href="#" target="_blank" rel="noreferrer" hidden>打开本地 JSON ↗</a><button id="clearDetailButton" class="clear-button" type="button">清空本板块</button><button id="backButton" class="back-button" type="button">← 返回总览</button></div></div>
+      <div id="detailList" class="detail-list"></div>
+    </section>
+    <dialog id="clearDialog" class="clear-dialog" aria-labelledby="clearDialogTitle">
+      <div class="clear-dialog-body">
+        <h2 id="clearDialogTitle">确认清空</h2>
+        <p id="clearDialogMessage">这会删除本地采集结果 JSON 和对应统计，登录 Cookie 不会受到影响。</p>
+        <div class="dialog-actions"><button id="cancelClearButton" class="cancel-button" type="button">取消</button><button id="confirmClearButton" class="danger-button" type="button">确认清空</button></div>
+      </div>
+    </dialog>
+    <footer><span>DouYin MCP / local dashboard</span><span id="rootLabel">连接中…</span></footer>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const labels = { get_work_info:'获取作品', get_user_info:'获取用户', get_user_works:'获取用户作品', search_videos:'搜索视频', search_users:'搜索用户', search_live_rooms:'搜索直播间', get_comments:'抓取评论', get_favorite_list:'获取收藏', get_feed:'获取推荐流', get_live_info:'获取直播间', poll_live_events:'读取直播事件', poll_private_messages:'读取私信', start_live_monitor:'启动直播监听', douyin_login:'登录流程', capture_work_frame:'截取视频画面', capture_video_frame:'截取视频画面', download_work:'下载作品' };
+    const captureTools = new Set(['get_work_info','get_user_info','get_user_works','search_videos','search_users','search_live_rooms','get_comments','get_favorite_list','get_feed','download_work','capture_work_frame','capture_video_frame','get_live_info','poll_live_events','poll_private_messages']);
+    const detailNames = { videos:'作品 / 视频', comments:'已抓评论', live_rooms:'直播间', live_messages:'弹幕 / 直播事件' };
+    const detailDescriptions = { videos:'作品信息、用户作品、关键词搜索结果与信息流；每条作品必须抓取并本地保存封面。', comments:'评论原文、用户信息、点赞、回复与图片/视频附件。', live_rooms:'直播间状态、房间 ID、主播信息与直播间搜索结果。', live_messages:'直播弹幕、礼物、进场、点赞、关注事件，以及私信轮询结果。' };
+    const clearNames = { videos:'作品 / 视频', comments:'已抓评论', live_rooms:'直播间', live_messages:'弹幕 / 直播事件' };
+    let latestData = null;
+    let currentDetail = null;
+    let pendingClear = null;
+    function fmtTime(ts) { return ts ? new Date(ts * 1000).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit', second:'2-digit'}) : '—'; }
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
+    function artifactUrl(path) { return '/api/artifacts/' + String(path || '').split('/').map(encodeURIComponent).join('/'); }
+    function formatNumber(value) { return Number(value || 0).toLocaleString('zh-CN'); }
+    function toolLabel(tool) { return labels[tool] || tool || '系统'; }
+    function renderLogs(data) {
+      const logs = (data.logs || []).slice(0, 90).reverse();
+      if (!logs.length) { $('activity').innerHTML = '<div class="terminal-empty">暂无执行日志，等待 MCP 工具调用。</div>'; return; }
+      $('activity').innerHTML = logs.map((entry) => `<div class="terminal-line ${escapeHtml(entry.level || 'info')}"><span class="terminal-time">[${fmtTime(entry.at)}]</span><span class="terminal-level">${escapeHtml((entry.level || 'info').toUpperCase())}</span><span>${escapeHtml(entry.message || toolLabel(entry.tool))}</span></div>`).join('');
+      $('activity').scrollTop = $('activity').scrollHeight;
+    }
+    function operationContext(parameters) {
+      const entries = Object.entries(parameters || {});
+      if (!entries.length) return '未记录输入参数';
+      return entries.map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`).join(' · ');
+    }
+    function legacyOperations(data, persisted) {
+      const pending = new Map();
+      const derived = [];
+      [...(data.logs || [])].reverse().forEach((entry, index) => {
+        if (!captureTools.has(entry.tool)) return;
+        if (entry.level === 'start') {
+          const operation = { id:`log-${entry.at}-${entry.tool}-${index}`, tool:entry.tool, status:'running', started_at:entry.at, finished_at:null, count:0, parameters:{} };
+          derived.push(operation);
+          const queue = pending.get(entry.tool) || [];
+          queue.push(operation);
+          pending.set(entry.tool, queue);
+          return;
+        }
+        if (!['success', 'error'].includes(entry.level)) return;
+        const queue = pending.get(entry.tool) || [];
+        const operation = [...queue].reverse().find((item) => item.status === 'running');
+        if (!operation) return;
+        operation.status = entry.level === 'success' ? 'success' : 'failed';
+        operation.finished_at = entry.at;
+        if (entry.level === 'error') operation.error = entry.message || '抓取失败';
+      });
+      return derived.filter((legacy) => !persisted.some((operation) => operation.tool === legacy.tool && Math.abs(Number(operation.started_at || 0) - Number(legacy.started_at || 0)) <= 1));
+    }
+    function renderOperations(data) {
+      const persisted = data.operations || [];
+      const operations = [...persisted, ...legacyOperations(data, persisted)].sort((a, b) => Number(b.started_at || 0) - Number(a.started_at || 0)).slice(0, 100);
+      const statusNames = { running:'进行中', success:'成功', empty:'空结果', failed:'失败' };
+      $('operationCount').textContent = `${formatNumber(operations.length)} 次操作`;
+      if (!operations.length) {
+        $('operationLedger').innerHTML = '<div class="empty-detail note">尚未进行抓取操作。抓取一开始就会强制登记，失败和空结果也会保留。</div>';
+        return;
+      }
+      $('operationLedger').innerHTML = operations.map((operation) => {
+        const status = operation.status || 'running';
+        const count = Number(operation.count || 0);
+        const result = status === 'success' && count > 0 ? ` · ${formatNumber(count)} 条` : '';
+        const error = operation.error ? `<span class="operation-error">${escapeHtml(operation.error)}</span>` : '';
+        const link = operation.artifact_path ? `<a class="result-link" href="${artifactUrl(operation.artifact_path)}" target="_blank" rel="noreferrer">结果 JSON →</a>` : `<span class="operation-time">${fmtTime(operation.finished_at || operation.started_at)}</span>`;
+        return `<div class="operation-row"><span class="operation-status ${escapeHtml(status)}">${escapeHtml(statusNames[status] || status)}</span><div class="operation-tool">${escapeHtml(toolLabel(operation.tool))}${result}</div><div class="operation-context">${escapeHtml(operationContext(operation.parameters))}${error}</div>${link}</div>`;
+      }).join('');
+    }
+    function videoItemHtml(item) {
+      const coverUrl = firstUrl(item.video_cover) || firstUrl(item.cover_url) || firstUrl(item.origin_cover) || firstUrl(item.cover) || firstUrl(item.dynamic_cover) || firstUrl(item.video);
+      const cover = coverUrl ? `<img class="detail-cover" src="${escapeHtml(coverUrl)}" alt="视频封面" loading="lazy" />` : '<div class="detail-cover" aria-hidden="true"></div>';
+      const id = item.work_id || item.aweme_id || item.id || '未知';
+      const title = item.title || item.desc || '未命名视频';
+      const heartIcon = '<svg class="engagement-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.2-4.35-9.5-8.75C.62 8.58 2.15 5 5.8 5c2.08 0 3.55 1.17 4.2 2.5C10.65 6.17 12.12 5 14.2 5c3.65 0 5.18 3.58 3.3 7.25C19.2 16.65 12 21 12 21Z"/></svg>';
+      const commentIcon = '<svg class="engagement-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-8 7.5 8.8 8.8 0 0 1-3.35-.64L4 20l1.64-3.76A7.35 7.35 0 0 1 4 11.5 7.5 7.5 0 0 1 12 4a7.5 7.5 0 0 1 8 7.5Z"/></svg>';
+      return `<article class="detail-item">${cover}<div class="detail-copy"><p class="detail-title">${escapeHtml(title)}</p><p class="detail-meta">作品 ID：${escapeHtml(id)}</p><div class="engagement-row"><span class="engagement-stat like">${heartIcon}<span>点赞 ${formatNumber(item.digg_count)}</span></span><span class="engagement-stat comment">${commentIcon}<span>评论 ${formatNumber(item.comment_count)}</span></span></div><a class="detail-link" href="${escapeHtml(item.work_url || '#')}" target="_blank" rel="noreferrer">打开抖音作品 ↗</a></div></article>`;
+    }
+    function videoArtifactRowHtml(artifact) {
+      return `<div class="artifact-row"><div><div class="artifact-title">视频结果 · ${formatNumber(artifact.count)} 条</div><div class="detail-meta">${fmtTime(artifact.at)} · ${escapeHtml(toolLabel(artifact.tool))}</div></div></div>`;
+    }
+    function artifactRowHtml(artifact, label) {
+      return `<div class="artifact-row"><div><div class="artifact-title">${escapeHtml(label)} · ${formatNumber(artifact.count)} 条</div><div class="detail-meta">${fmtTime(artifact.at)} · ${escapeHtml(toolLabel(artifact.tool))}</div></div><a class="result-link" href="${artifactUrl(artifact.path)}" target="_blank" rel="noreferrer">打开本地 JSON 结果 →</a></div>`;
+    }
+    function firstUrl(value) {
+      if (!value) return '';
+      if (typeof value === 'string') return value;
+      if (Array.isArray(value)) return value.map((item) => firstUrl(item)).find(Boolean) || '';
+      if (typeof value === 'object') return firstUrl(value.origin_url) || firstUrl(value.medium_url) || firstUrl(value.crop_url) || firstUrl(value.thumb_url) || firstUrl(value.download_url) || firstUrl(value.play_addr) || firstUrl(value.download_addr) || firstUrl(value.url_list) || firstUrl(value.origin_cover) || firstUrl(value.cover) || firstUrl(value.dynamic_cover);
+      return '';
+    }
+    function commentAttachmentHtml(comment) {
+      const images = Array.isArray(comment.image_list) ? comment.image_list : [];
+      const videos = Array.isArray(comment.video_list) ? comment.video_list : [];
+      const imageHtml = images.map((image) => firstUrl(image)).filter(Boolean).map((url) => `<img class="comment-attachment" src="${escapeHtml(url)}" alt="评论图片附件" loading="lazy" />`).join('');
+      const videoHtml = videos.map((video) => {
+        const url = firstUrl(video);
+        return url ? `<video class="comment-attachment" controls preload="metadata" src="${escapeHtml(url)}"></video>` : '';
+      }).join('');
+      return imageHtml + videoHtml;
+    }
+    function sourceVideoMap(data) {
+      const map = new Map();
+      (data.artifacts || []).filter((artifact) => artifact.kind === 'videos').forEach((artifact) => {
+        (artifact.items || []).forEach((video) => {
+          const id = String(video.work_id || video.aweme_id || video.id || '');
+          if (id && !map.has(id)) map.set(id, video);
+        });
+      });
+      return map;
+    }
+    function commentItemHtml(comment, sources) {
+      const user = comment.user || {};
+      const avatar = firstUrl(user.avatar_thumb) || firstUrl(user.avatar_medium) || '';
+      const avatarHtml = avatar ? `<img class="comment-avatar" src="${escapeHtml(avatar)}" alt="${escapeHtml(user.nickname || '评论用户')}头像" loading="lazy" />` : '<div class="comment-avatar" aria-hidden="true"></div>';
+      const id = String(comment.aweme_id || '');
+      const source = sources.get(id);
+      const sourceTitle = source?.title || source?.desc || `视频 ${id || '未知'}`;
+      const sourceUrl = source?.work_url || source?.aweme_url || (id ? `https://www.douyin.com/video/${encodeURIComponent(id)}` : '#');
+      const sourceHtml = id ? `<a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(sourceUrl)}</a><span class="comment-source-title">${escapeHtml(sourceTitle)}</span>` : '<span>未识别视频</span>';
+      const attachments = commentAttachmentHtml(comment);
+      const replyCount = Number(comment.reply_comment_total || 0);
+      return `<article class="comment-card">${avatarHtml}<div><div class="comment-author-line"><span class="comment-author">${escapeHtml(user.nickname || '未知用户')}</span><time class="comment-time">${fmtTime(comment.create_time)}</time></div><p class="comment-text">${escapeHtml(comment.text || '')}</p>${attachments ? `<div class="comment-attachments">${attachments}</div>` : ''}<div class="comment-footer"><span class="comment-like">♥ ${formatNumber(comment.digg_count)} 赞</span>${replyCount ? `<span>${formatNumber(replyCount)} 条回复</span>` : ''}<span class="comment-source">来自视频：${sourceHtml}</span></div></div></article>`;
+    }
+    function renderDetail(data, kind) {
+      currentDetail = kind;
+      $('detailTitle').textContent = detailNames[kind] || '详情';
+      $('detailDescription').textContent = detailDescriptions[kind] || '';
+      $('clearDetailButton').textContent = '清空' + (clearNames[kind] || '本板块');
+      const artifacts = (data.artifacts || []).filter((artifact) => kind === 'live_messages' ? ['live_messages', 'private_messages'].includes(artifact.kind) : artifact.kind === kind);
+      const sourceLink = $('detailSource');
+      sourceLink.hidden = true;
+      sourceLink.removeAttribute('href');
+      $('detailList').className = 'detail-list';
+      if (!artifacts.length) { $('detailList').innerHTML = '<div class="empty-detail note">还没有这类抓取结果。调用对应 MCP 工具后，结果会自动出现在这里。</div>'; return; }
+      if (kind === 'comments') {
+        const latestArtifact = artifacts[0];
+        const sources = sourceVideoMap(data);
+        const items = artifacts.flatMap((artifact) => (artifact.items || []).map((comment) => commentItemHtml(comment, sources)));
+        sourceLink.hidden = false;
+        sourceLink.href = artifactUrl(latestArtifact.path);
+        $('detailList').className = 'detail-list comments-list';
+        $('detailList').innerHTML = items.length ? items.join('') : '<div class="empty-detail note">评论结果文件存在，但暂时没有可展示的评论内容。</div>';
+        return;
+      }
+      if (kind === 'videos') {
+        const cards = artifacts.flatMap((artifact) => (artifact.items || []).map((item) => videoItemHtml(item)));
+        $('detailList').innerHTML = cards.length ? cards.join('') : artifacts.map(videoArtifactRowHtml).join('');
+      } else {
+        $('detailList').innerHTML = artifacts.map((artifact) => artifactRowHtml(artifact, detailNames[kind])).join('');
+      }
+    }
+    function openDetail(kind, updateUrl = true) {
+      if (updateUrl) history.pushState({}, '', '#detail=' + encodeURIComponent(kind));
+      $('overviewPanels').hidden = true;
+      $('detailPanel').hidden = false;
+      renderDetail(latestData || {}, kind);
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+    function closeDetail(updateUrl = true) {
+      if (updateUrl) history.pushState({}, '', window.location.pathname);
+      currentDetail = null;
+      $('detailPanel').hidden = true;
+      $('overviewPanels').hidden = false;
+    }
+    function render(data) {
+      latestData = data;
+      const c = data.counts || {};
+      $('videos').textContent = formatNumber(c.videos);
+      $('comments').textContent = formatNumber(c.comments);
+      $('rooms').textContent = formatNumber(c.live_rooms);
+      $('messages').textContent = formatNumber((c.live_messages || 0) + (c.private_messages || 0));
+      $('updated').textContent = data.updated_at ? '更新于 ' + fmtTime(data.updated_at) : '等待数据';
+      const running = data.process_running || data.status === 'running';
+      const loggingIn = data.login_running;
+      $('startButton').classList.toggle('running', running);
+      $('startButton').textContent = running ? 'MCP 运行中' : '启动 MCP';
+      $('statusDot').className = 'dot ' + (loggingIn ? 'busy' : (running ? 'live' : ''));
+      $('statusText').textContent = loggingIn ? '等待浏览器扫码登录' : (running ? '服务运行中' : '服务未启动');
+      $('rootLabel').textContent = data.project_root ? '项目已连接' : '本地控制台';
+      renderLogs(data);
+      renderOperations(data);
+      if (currentDetail) renderDetail(data, currentDetail);
+    }
+    let refreshInFlight = false;
+    async function refresh() {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const response = await fetch('/api/status?force=' + Date.now(), {
+          cache: 'no-store',
+          headers: {'Cache-Control': 'no-cache'}
+        });
+        if (!response.ok) throw new Error('status_failed');
+        render(await response.json());
+      } catch (_) {
+        $('statusText').textContent = '控制台连接中断';
+      } finally {
+        refreshInFlight = false;
+      }
+    }
+    async function action(path) {
+      await fetch(path + '?force=' + Date.now(), {method:'POST', cache:'no-store', headers:{'Cache-Control':'no-cache'}});
+      await refresh();
+    }
+    function requestClear(kind) {
+      pendingClear = kind || null;
+      const isAll = !pendingClear;
+      $('clearDialogTitle').textContent = isAll ? '确认一键清空' : '确认清空' + (clearNames[pendingClear] || '本板块');
+      $('clearDialogMessage').textContent = isAll
+        ? '将删除全部采集结果 JSON，并把所有统计归零；登录 Cookie、原始项目和运行环境不会受到影响。'
+        : `将删除“${clearNames[pendingClear] || '本板块'}”的采集结果 JSON，并把该板块统计归零；登录 Cookie 不会受到影响。`;
+      $('clearDialog').showModal();
+    }
+    async function confirmClear() {
+      const kind = pendingClear;
+      const button = $('confirmClearButton');
+      button.disabled = true;
+      button.textContent = '清空中…';
+      try {
+        const endpoint = kind ? '/api/clear/' + encodeURIComponent(kind) : '/api/clear';
+        const response = await fetch(endpoint + '?force=' + Date.now(), {method:'POST', cache:'no-store', headers:{'Cache-Control':'no-cache'}});
+        if (!response.ok) throw new Error('clear_failed');
+        $('clearDialog').close();
+        pendingClear = null;
+        await refresh();
+      } catch (_) {
+        window.alert('清空失败，请确认网页控制台仍在运行后重试。');
+      } finally {
+        button.disabled = false;
+        button.textContent = '确认清空';
+      }
+    }
+    $('startButton').onclick = () => action('/api/start');
+    $('stopButton').onclick = () => action('/api/stop');
+    $('clearAllButton').onclick = () => requestClear(null);
+    $('clearDetailButton').onclick = () => requestClear(currentDetail);
+    $('cancelClearButton').onclick = () => { pendingClear = null; $('clearDialog').close(); };
+    $('confirmClearButton').onclick = confirmClear;
+    $('backButton').onclick = () => closeDetail();
+    document.querySelectorAll('[data-detail]').forEach((button) => button.addEventListener('click', () => openDetail(button.dataset.detail)));
+    document.querySelectorAll('[data-clear-kind]').forEach((button) => button.addEventListener('click', () => requestClear(button.dataset.clearKind)));
+    function syncDetailFromHash() { const match = location.hash.match(/^#detail=(.+)$/); match ? openDetail(decodeURIComponent(match[1]), false) : closeDetail(false); }
+    window.addEventListener('popstate', syncDetailFromHash);
+    window.addEventListener('hashchange', syncDetailFromHash);
+    refresh().then(syncDetailFromHash);
+    setInterval(refresh, 1000);
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  </script>
+</body>
+</html>

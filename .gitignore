@@ -1,0 +1,33 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+ENV/
+
+# Bundled/local runtime assets
+.runtime/
+.browser/
+
+# Node/Electron build output
+node_modules/
+release/
+dist/
+
+# Runtime data, downloaded media, statistics and screenshots
+work/
+outputs/
+DouYin_Spider/datas/
+
+# Local credentials and environment files
+.env
+**/.env
+
+# Local tooling and logs
+.idea/
+.vscode/
+*.log
+*.tmp
+.DS_Store

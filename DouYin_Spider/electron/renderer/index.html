@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self';">
+  <title>Douyin Spider</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">DY</span><div><div class="brand-name">Douyin Spider</div><div class="brand-sub">桌面采集工作台</div></div></div>
+      <div class="top-actions"><span id="engine-pill" class="pill muted"><i></i>引擎连接中</span><button id="open-output" class="ghost-button">打开结果目录 ↗</button></div>
+    </header>
+    <main>
+      <section class="hero">
+        <div class="eyebrow"><span class="eyebrow-line"></span>一条清晰的采集链路</div>
+        <h1>从扫码到结果，<em>只要一条线。</em></h1>
+        <p>登录、选择目标、开始抓取。Cookie 和安全凭证由本地封装工具处理，不需要打开开发者工具。</p>
+        <div class="hero-meta"><span class="dot-live"></span><span id="auth-copy">还没有登录抖音</span><span class="meta-separator">·</span><span>凭证只保存在本机</span></div>
+      </section>
+      <section class="workspace-grid">
+        <div class="panel capture-panel">
+          <div class="panel-heading"><div><span class="section-kicker">开始采集</span><h2>告诉我你要找什么</h2></div><span class="panel-index">01 / 02</span></div>
+          <div class="mode-tabs"><button class="mode-tab active" data-mode="search">搜索作品</button><button class="mode-tab" data-mode="work">作品链接</button><button class="mode-tab" data-mode="user">用户主页</button></div>
+          <form id="crawl-form">
+            <label id="query-label" class="field-label" for="query">搜索关键词</label>
+            <div class="input-wrap"><span class="input-icon">⌕</span><input id="query" autocomplete="off" placeholder="例如：城市骑行、咖啡器具" /></div>
+            <div id="search-options" class="options-row">
+              <div><label class="field-label" for="require-num">抓取数量</label><select id="require-num"><option value="10">10 条</option><option value="20" selected>20 条</option><option value="50">50 条</option><option value="100">100 条</option></select></div>
+              <div><label class="field-label" for="sort-type">排序方式</label><select id="sort-type"><option value="0">综合排序</option><option value="1">最多点赞</option><option value="2">最新发布</option></select></div>
+            </div>
+            <div class="output-choice"><label class="field-label">保存方式</label><div class="choice-grid"><label><input type="radio" name="save" value="excel" checked><span><b>Excel</b><small>结构化表格</small></span></label><label><input type="radio" name="save" value="media"><span><b>媒体文件</b><small>视频 / 图片</small></span></label><label><input type="radio" name="save" value="all"><span><b>全部保存</b><small>数据 + 媒体</small></span></label></div></div>
+            <button id="crawl-button" class="primary-button" type="submit"><span>开始抓取</span><b>→</b></button>
+          </form>
+          <div id="form-message" class="form-message"></div>
+        </div>
+        <aside class="side-column">
+          <div class="panel login-panel"><div class="panel-heading compact"><div><span class="section-kicker">准备工作</span><h2>先把账号接上</h2></div><span class="lock-mark">⌁</span></div><p class="login-help">扫码完成登录后，应用会自动读取会话并保存，下次打开可直接使用。</p><button id="login-button" class="login-button"><span class="login-symbol">↗</span><span id="login-button-text">扫码登录</span><span class="arrow">→</span></button><div class="safe-note"><span>●</span> 不展示、不上传 Cookie</div></div>
+          <div class="panel route-panel"><div class="panel-heading compact"><div><span class="section-kicker">工作状态</span><h2>当前链路</h2></div><span class="panel-index">LIVE</span></div><div class="route"><div class="route-item done"><span class="route-node">✓</span><div><b>应用就绪</b><small>本地采集引擎</small></div></div><div class="route-line"></div><div id="route-login" class="route-item"><span class="route-node">02</span><div><b>扫码登录</b><small>等待账号会话</small></div></div><div class="route-line"></div><div id="route-crawl" class="route-item"><span class="route-node">03</span><div><b>开始抓取</b><small>等待采集任务</small></div></div></div></div>
+        </aside>
+      </section>
+      <section class="panel log-panel"><div class="log-header"><div><span class="section-kicker">活动记录</span><h2>运行日志</h2></div><button id="clear-log" class="text-button">清空</button></div><div id="log-output" class="log-output"><div class="log-line system"><span>现在</span><b>等待操作</b><em>扫码登录后即可开始你的第一次采集。</em></div></div></section>
+    </main>
+    <footer><span>Douyin Spider · 仅用于合法的数据整理与学习研究</span><span id="data-path"></span></footer>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>
